@@ -1,0 +1,272 @@
+---
+# SQL Server Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlserver-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sqlserver
+  template:
+    metadata:
+      labels:
+        app: sqlserver
+    spec:
+      containers:
+      - name: sqlserver
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+        - containerPort: 1433
+        env:
+        - name: SA_PASSWORD
+          value: "Ch411eng3"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: MSSQL_PID
+          value: "Express"
+        volumeMounts:
+        - name: sqlserver-storage
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: sqlserver-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sqlserver-service
+spec:
+  selector:
+    app: sqlserver
+  ports:
+    - protocol: TCP
+      port: 1433
+      targetPort: 1433
+  type: ClusterIP
+
+---
+# Elasticsearch Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
+        ports:
+        - containerPort: 9200
+        env:
+        - name: node.name
+          value: elasticsearch
+        - name: cluster.name
+          value: es-docker-cluster
+        - name: bootstrap.memory_lock
+          value: "true"
+        - name: ES_JAVA_OPTS
+          value: "-Xms1g -Xmx1g"
+        volumeMounts:
+        - name: elastic-data
+          mountPath: /usr/share/elasticsearch/data
+        resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+      volumes:
+      - name: elastic-data
+        emptyDir: {}
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - protocol: TCP
+      port: 9200
+      targetPort: 9200
+  type: ClusterIP
+
+---
+# Kibana Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:7.9.0
+        ports:
+        - containerPort: 5601
+        env:
+        - name: ELASTICSEARCH_URL
+          value: "http://elasticsearch:9200"
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://elasticsearch:9200"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-service
+spec:
+  selector:
+    app: kibana
+  ports:
+    - protocol: TCP
+      port: 5601
+      targetPort: 5601
+  type: ClusterIP
+
+---
+# Zookeeper Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+      - name: zookeeper
+        image: wurstmeister/zookeeper
+        ports:
+        - containerPort: 2181
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-service
+spec:
+  selector:
+    app: zookeeper
+  ports:
+    - protocol: TCP
+      port: 2181
+      targetPort: 2181
+  type: ClusterIP
+
+---
+# Kafka Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: wurstmeister/kafka
+        ports:
+        - containerPort: 29092
+        # env:
+        # - name: KAFKA_ADVERTISED_LISTENERS
+        #   value: INSIDE://kafka:9092,OUTSIDE://kafka:29092
+        # - name: KAFKA_ZOOKEEPER_CONNECT
+          # value: "zookeeper:2181"
+
+        env:
+          - name: KAFKA_LISTENERS
+            value: PLAINTEXT://0.0.0.0:29092
+          - name: KAFKA_ADVERTISED_LISTENERS
+            value: PLAINTEXT://kafka:29092
+          - name: KAFKA_ZOOKEEPER_CONNECT
+            value: zookeeper:2181
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+spec:
+  selector:
+    app: kafka
+  ports:
+    - protocol: TCP
+      port: 29092
+      targetPort: 29092
+  type: ClusterIP
+
+---
+# N5Api Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n5api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n5api
+  template:
+    metadata:
+      labels:
+        app: n5api
+    spec:
+      containers:
+      - name: n5api
+        image: n5api:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: Kafka__Server
+          value: "kafka:29092"
+        - name: ElasticConfiguration__Uri
+          value: "http://elasticsearch:9200"
+        - name: ASPNETCORE_URLS
+          value: "http://+:80"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Database=dbtest;User Id=sa;Password=Ch411eng3;Server=sqlserver,1433"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n5api-service
+spec:
+  selector:
+    app: n5api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer

@@ -1,0 +1,35 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Infrastructure",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "Build Infraestructure",
+            "program": "${workspaceFolder}/N5Infrastructure/bin/Debug/net7.0/N5Infrastructure.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/N5Infrastructure",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "LocalTemplate"
+            }
+        },
+        {
+            "name": "Launch Api",
+            "type": "coreclr",
+            "request": "launch",
+            "requireExactSource": false,
+            "preLaunchTask": "Build Solution",
+            "program": "${workspaceFolder}/N5Api/bin/Debug/net7.0/N5Api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/N5Api",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    ]
+}
